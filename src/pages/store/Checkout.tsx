@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Truck, MapPin, Plus, CheckCircle, Loader2 } from 'lucide-react';
+import { CreditCard, Truck, MapPin, Plus, Loader2 } from 'lucide-react';
 import { StorefrontLayout } from '@/components/storefront/StorefrontLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useRazorpay } from '@/hooks/useRazorpay';
 import type { Address, CartItem, Product, PaymentMethod } from '@/types/database';
 
 interface CartItemWithProduct extends CartItem {
@@ -40,6 +41,7 @@ export default function CheckoutPage() {
   });
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { initiatePayment, isLoading: isPaymentLoading } = useRazorpay();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -128,14 +130,14 @@ export default function CheckoutPage() {
       const shippingCharge = subtotal >= 500 ? 0 : 50;
       const total = subtotal + shippingCharge;
 
-      // Create order
+      // Create order with pending payment status
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           order_number: orderNumber,
           user_id: user.id,
           status: 'new',
-          payment_status: paymentMethod === 'cod' ? 'pending' : 'pending',
+          payment_status: 'pending',
           payment_method: paymentMethod,
           subtotal,
           discount: 0,
@@ -181,36 +183,82 @@ export default function CheckoutPage() {
         delivery_charge: shippingCharge,
       });
 
-      // Auto-create/update customer profile if not exists
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!existingProfile) {
-        // Create profile with order information
-        await supabase.from('profiles').insert({
-          user_id: user.id,
-          full_name: address.full_name,
-          mobile_number: address.mobile_number,
-          email: user.email,
+      // Handle payment based on method
+      if (paymentMethod === 'cod') {
+        // Create COD payment record
+        await supabase.from('payments').insert({
+          order_id: order.id,
+          amount: total,
+          method: 'cod',
+          status: 'pending',
         });
-      }
 
-      // Clear cart
-      const { data: cart } = await supabase.from('cart').select('id').eq('user_id', user.id).single();
-      if (cart) {
-        await supabase.from('cart_items').delete().eq('cart_id', cart.id);
+        // Clear cart and redirect
+        await clearCartAndRedirect(orderNumber);
+      } else if (paymentMethod === 'online') {
+        // Initiate Razorpay payment
+        initiatePayment({
+          amount: total,
+          orderId: order.id,
+          orderNumber: orderNumber,
+          customerName: address.full_name,
+          customerEmail: user.email || undefined,
+          customerPhone: address.mobile_number,
+          onSuccess: async () => {
+            await clearCartAndRedirect(orderNumber);
+          },
+          onFailure: async (error) => {
+            // Update order status to payment failed
+            await supabase
+              .from('orders')
+              .update({ payment_status: 'failed' })
+              .eq('id', order.id);
+            
+            toast({ 
+              title: 'Payment Failed', 
+              description: error || 'Please try again or choose a different payment method', 
+              variant: 'destructive' 
+            });
+            setIsPlacingOrder(false);
+          },
+        });
+        return; // Don't reset isPlacingOrder yet - wait for payment result
       }
-
-      toast({ title: 'Order placed!', description: `Order #${orderNumber} has been placed successfully` });
-      navigate(`/order-success?order=${orderNumber}`);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to place order', variant: 'destructive' });
-    } finally {
       setIsPlacingOrder(false);
     }
+  };
+
+  const clearCartAndRedirect = async (orderNumber: string) => {
+    // Auto-create/update customer profile if not exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user!.id)
+      .single();
+
+    if (!existingProfile) {
+      const address = addresses.find(a => a.id === selectedAddress);
+      if (address) {
+        await supabase.from('profiles').insert({
+          user_id: user!.id,
+          full_name: address.full_name,
+          mobile_number: address.mobile_number,
+          email: user!.email,
+        });
+      }
+    }
+
+    // Clear cart
+    const { data: cart } = await supabase.from('cart').select('id').eq('user_id', user!.id).single();
+    if (cart) {
+      await supabase.from('cart_items').delete().eq('cart_id', cart.id);
+    }
+
+    toast({ title: 'Order placed!', description: `Order #${orderNumber} has been placed successfully` });
+    setIsPlacingOrder(false);
+    navigate(`/order-success?order=${orderNumber}`);
   };
 
   if (isLoading) {
@@ -413,12 +461,12 @@ export default function CheckoutPage() {
                         </div>
                       </Label>
                     </div>
-                    <div className="flex items-center gap-3 opacity-50">
-                      <RadioGroupItem value="online" id="online" disabled />
-                      <Label htmlFor="online" className="flex-1">
-                        <div className="p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <RadioGroupItem value="online" id="online" />
+                      <Label htmlFor="online" className="flex-1 cursor-pointer">
+                        <div className="p-3 border rounded-lg hover:border-primary transition-colors">
                           <p className="font-medium">Online Payment</p>
-                          <p className="text-sm text-muted-foreground">Coming soon</p>
+                          <p className="text-sm text-muted-foreground">Pay securely with Razorpay (UPI, Cards, Netbanking)</p>
                         </div>
                       </Label>
                     </div>

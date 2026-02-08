@@ -6,10 +6,10 @@ import { ProductCard } from '@/components/storefront/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShimmerProductGrid } from '@/components/ui/shimmer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useOffers } from '@/hooks/useOffers';
 import type { Product, Banner, Category } from '@/types/database';
 
 function FullPageShimmer() {
@@ -40,7 +40,36 @@ function FullPageShimmer() {
       {/* Products shimmer */}
       <div className="container mx-auto px-4 py-10">
         <Skeleton className="h-8 w-48 mb-6" />
-        <ShimmerProductGrid items={4} />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-card rounded-lg border border-border overflow-hidden">
+              <Skeleton className="aspect-square" />
+              <div className="p-3 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-6 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Bestsellers shimmer */}
+      <div className="bg-muted py-10">
+        <div className="container mx-auto px-4">
+          <Skeleton className="h-8 w-48 mb-6" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-lg border border-border overflow-hidden">
+                <Skeleton className="aspect-square" />
+                <div className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-6 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </StorefrontLayout>
   );
@@ -57,6 +86,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { getProductOffer, isLoading: isOffersLoading } = useOffers();
 
   useEffect(() => {
     fetchData();
@@ -148,7 +178,8 @@ export default function HomePage() {
     }
   };
 
-  if (isLoading) return <FullPageShimmer />;
+  // Wait for both data and offers to load
+  if (isLoading || isOffersLoading) return <FullPageShimmer />;
 
   return (
     <StorefrontLayout>
@@ -267,7 +298,7 @@ export default function HomePage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} />
+                <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} productOffer={getProductOffer(product)} />
               ))}
             </div>
           </div>
@@ -340,7 +371,7 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {bestsellerProducts.map((product) => (
-              <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} />
+              <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} productOffer={getProductOffer(product)} />
             ))}
           </div>
         </section>
@@ -358,7 +389,7 @@ export default function HomePage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {newArrivals.map((product) => (
-                <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} />
+                <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} productOffer={getProductOffer(product)} />
               ))}
             </div>
           </div>
