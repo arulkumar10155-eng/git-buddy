@@ -3,7 +3,14 @@ import { Heart, ShoppingCart, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { Product } from '@/types/database';
+import type { Product, Offer } from '@/types/database';
+
+interface ProductOffer {
+  offer: Offer;
+  discountedPrice: number;
+  discountAmount: number;
+  discountLabel: string;
+}
 
 interface ProductCardProps {
   product: Product;
@@ -11,6 +18,7 @@ interface ProductCardProps {
   onAddToWishlist?: (product: Product) => void;
   variant?: 'default' | 'compact' | 'horizontal';
   showQuickAdd?: boolean;
+  productOffer?: ProductOffer | null;
 }
 
 export function ProductCard({
@@ -19,12 +27,21 @@ export function ProductCard({
   onAddToWishlist,
   variant = 'default',
   showQuickAdd = true,
+  productOffer,
 }: ProductCardProps) {
-  const discount = product.mrp && product.mrp > product.price
-    ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
-    : 0;
+  // Use offer price if available, otherwise use MRP discount
+  const displayPrice = productOffer?.discountedPrice ?? product.price;
+  const originalPrice = productOffer ? product.price : product.mrp;
+  const hasDiscount = productOffer 
+    ? productOffer.discountAmount > 0 
+    : (product.mrp && product.mrp > product.price);
+  const discountLabel = productOffer?.discountLabel || (
+    product.mrp && product.mrp > product.price 
+      ? `${Math.round(((product.mrp - product.price) / product.mrp) * 100)}% OFF`
+      : ''
+  );
 
-  const primaryImage = product.images?.find(img => img.is_primary)?.image_url 
+  const primaryImage = product.images?.find(img => img.is_primary)?.image_url
     || product.images?.[0]?.image_url 
     || '/placeholder.svg';
 
@@ -49,11 +66,11 @@ export function ProductCard({
             {product.short_description || product.description}
           </p>
           <div className="flex items-center gap-2 mt-2">
-            <span className="font-bold text-lg">₹{Number(product.price).toFixed(0)}</span>
-            {product.mrp && product.mrp > product.price && (
+            <span className="font-bold text-lg">₹{Number(displayPrice).toFixed(0)}</span>
+            {hasDiscount && originalPrice && (
               <>
-                <span className="text-sm text-muted-foreground line-through">₹{Number(product.mrp).toFixed(0)}</span>
-                <Badge variant="destructive" className="text-xs">{discount}% OFF</Badge>
+                <span className="text-sm text-muted-foreground line-through">₹{Number(originalPrice).toFixed(0)}</span>
+                <Badge variant="destructive" className="text-xs">{discountLabel}</Badge>
               </>
             )}
           </div>
@@ -80,8 +97,13 @@ export function ProductCard({
           {product.badge && (
             <Badge className="bg-primary text-[10px] px-1.5 py-0.5">{product.badge}</Badge>
           )}
-          {discount > 0 && (
-            <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5">{discount}% OFF</Badge>
+          {productOffer && (
+            <Badge variant="secondary" className="bg-green-500 text-white text-[10px] px-1.5 py-0.5">
+              {productOffer.discountLabel}
+            </Badge>
+          )}
+          {!productOffer && hasDiscount && discountLabel && (
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5">{discountLabel}</Badge>
           )}
           {product.is_bestseller && (
             <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5">Bestseller</Badge>
@@ -137,11 +159,11 @@ export function ProductCard({
         {/* Price */}
         <div className="flex items-center gap-2 mt-2">
           <span className={cn("font-bold text-foreground", variant === 'compact' ? "text-base" : "text-lg")}>
-            ₹{Number(product.price).toFixed(0)}
+            ₹{Number(displayPrice).toFixed(0)}
           </span>
-          {product.mrp && product.mrp > product.price && (
+          {hasDiscount && originalPrice && (
             <span className="text-sm text-muted-foreground line-through">
-              ₹{Number(product.mrp).toFixed(0)}
+              ₹{Number(originalPrice).toFixed(0)}
             </span>
           )}
         </div>
