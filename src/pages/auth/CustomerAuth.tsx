@@ -10,14 +10,14 @@ import { z } from 'zod';
 import { Store, ArrowLeft } from 'lucide-react';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
+  mobileNumber: z.string().min(10, 'Please enter a valid mobile number'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 const signupSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
   mobileNumber: z.string().min(10, 'Please enter a valid mobile number'),
-  email: z.string().email('Please enter a valid email'),
+  email: z.string().email('Please enter a valid email').optional().or(z.literal('')),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -47,6 +47,9 @@ export default function CustomerAuth() {
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
+  // Generate a deterministic email from mobile number for auth
+  const mobileToEmail = (mobile: string) => `${mobile.replace(/[^0-9]/g, '')}@mobile.user`;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -58,27 +61,19 @@ export default function CustomerAuth() {
         if (!result.success) {
           const fieldErrors: Record<string, string> = {};
           result.error.errors.forEach((err) => {
-            if (err.path[0]) {
-              fieldErrors[err.path[0] as string] = err.message;
-            }
+            if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
           });
           setErrors(fieldErrors);
           setIsLoading(false);
           return;
         }
 
-        const { error } = await signIn(formData.email, formData.password);
+        const authEmail = mobileToEmail(formData.mobileNumber);
+        const { error } = await signIn(authEmail, formData.password);
         if (error) {
-          toast({
-            title: 'Login failed',
-            description: error.message,
-            variant: 'destructive',
-          });
+          toast({ title: 'Login failed', description: 'Invalid mobile number or password', variant: 'destructive' });
         } else {
-          toast({
-            title: 'Welcome back!',
-            description: 'You have successfully logged in.',
-          });
+          toast({ title: 'Welcome back!', description: 'You have successfully logged in.' });
           navigate('/');
         }
       } else {
@@ -86,42 +81,34 @@ export default function CustomerAuth() {
         if (!result.success) {
           const fieldErrors: Record<string, string> = {};
           result.error.errors.forEach((err) => {
-            if (err.path[0]) {
-              fieldErrors[err.path[0] as string] = err.message;
-            }
+            if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
           });
           setErrors(fieldErrors);
           setIsLoading(false);
           return;
         }
 
+        const authEmail = mobileToEmail(formData.mobileNumber);
         const { error } = await signUp(
-          formData.email,
+          authEmail,
           formData.password,
           formData.mobileNumber,
           formData.fullName
         );
 
         if (error) {
-          toast({
-            title: 'Signup failed',
-            description: error.message,
-            variant: 'destructive',
-          });
+          if (error.message?.includes('already registered')) {
+            toast({ title: 'Account exists', description: 'This mobile number is already registered. Please login.', variant: 'destructive' });
+          } else {
+            toast({ title: 'Signup failed', description: error.message, variant: 'destructive' });
+          }
         } else {
-          toast({
-            title: 'Account created!',
-            description: 'Please check your email to verify your account.',
-          });
+          toast({ title: 'Account created!', description: 'You can now login with your mobile number.' });
           setIsLogin(true);
         }
       }
     } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Something went wrong. Please try again.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -139,87 +126,45 @@ export default function CustomerAuth() {
           </CardTitle>
           <CardDescription>
             {isLogin
-              ? 'Sign in to your account to continue shopping'
+              ? 'Sign in with your mobile number'
               : 'Create a new account to start shopping'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    name="fullName"
-                    placeholder="Enter your full name"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                  />
-                  {errors.fullName && (
-                    <p className="text-xs text-destructive">{errors.fullName}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mobileNumber">Mobile Number</Label>
-                  <Input
-                    id="mobileNumber"
-                    name="mobileNumber"
-                    placeholder="Enter your mobile number"
-                    value={formData.mobileNumber}
-                    onChange={handleChange}
-                  />
-                  {errors.mobileNumber && (
-                    <p className="text-xs text-destructive">{errors.mobileNumber}</p>
-                  )}
-                </div>
-              </>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input id="fullName" name="fullName" placeholder="Enter your full name" value={formData.fullName} onChange={handleChange} />
+                {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
+              </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email}</p>
-              )}
+              <Label htmlFor="mobileNumber">Mobile Number</Label>
+              <Input id="mobileNumber" name="mobileNumber" placeholder="Enter your mobile number" value={formData.mobileNumber} onChange={handleChange} type="tel" />
+              {errors.mobileNumber && <p className="text-xs text-destructive">{errors.mobileNumber}</p>}
             </div>
+
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email (Optional)</Label>
+                <Input id="email" name="email" type="email" placeholder="Enter your email (optional)" value={formData.email} onChange={handleChange} />
+                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={handleChange}
-              />
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password}</p>
-              )}
+              <Input id="password" name="password" type="password" placeholder="Enter your password" value={formData.password} onChange={handleChange} />
+              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
             </div>
 
             {!isLogin && (
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                />
-                {errors.confirmPassword && (
-                  <p className="text-xs text-destructive">{errors.confirmPassword}</p>
-                )}
+                <Input id="confirmPassword" name="confirmPassword" type="password" placeholder="Confirm your password" value={formData.confirmPassword} onChange={handleChange} />
+                {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
               </div>
             )}
 
@@ -229,27 +174,13 @@ export default function CustomerAuth() {
           </form>
 
           <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setErrors({});
-              }}
-              className="text-sm text-primary hover:underline"
-            >
-              {isLogin
-                ? "Don't have an account? Sign up"
-                : 'Already have an account? Sign in'}
+            <button type="button" onClick={() => { setIsLogin(!isLogin); setErrors({}); }} className="text-sm text-primary hover:underline">
+              {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
             </button>
           </div>
 
           <div className="mt-4 text-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/')}
-              className="text-muted-foreground"
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="text-muted-foreground">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Store
             </Button>
