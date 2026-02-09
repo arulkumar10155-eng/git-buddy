@@ -21,11 +21,30 @@ serve(async (req) => {
   }
 
   try {
-    const RAZORPAY_KEY_ID = Deno.env.get("RAZORPAY_KEY_ID");
-    const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
+    let RAZORPAY_KEY_ID = Deno.env.get("RAZORPAY_KEY_ID");
+    let RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
+
+    // Fallback: read from store_settings if env vars not set
+    if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+      const { data: creds } = await supabaseAdmin
+        .from("store_settings")
+        .select("value")
+        .eq("key", "razorpay_credentials")
+        .single();
+      
+      if (creds?.value) {
+        const val = creds.value as Record<string, string>;
+        RAZORPAY_KEY_ID = val.key_id;
+        RAZORPAY_KEY_SECRET = val.key_secret;
+      }
+    }
 
     if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-      throw new Error("Razorpay credentials not configured");
+      throw new Error("Razorpay credentials not configured. Please connect Razorpay in Admin Settings.");
     }
 
     // Verify auth

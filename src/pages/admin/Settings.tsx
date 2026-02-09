@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,16 +9,22 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Store, Palette, Truck, Link as LinkIcon, Bell, CreditCard, Megaphone, Loader2 } from 'lucide-react';
+import { Save, Store, Palette, Truck, Link as LinkIcon, Bell, CreditCard, Megaphone, Loader2, CheckCircle2, XCircle, ExternalLink, Shield, Unplug } from 'lucide-react';
 import type { StoreInfo, ThemeSettings, CheckoutSettings, SocialLinks } from '@/types/database';
 
-interface RazorpaySettings {
+interface RazorpayConnectionStatus {
+  connected: boolean;
+  is_test_mode: boolean;
+  key_id_preview: string | null;
+  connected_at: string | null;
+}
+
+interface RazorpayFormData {
   key_id: string;
   key_secret: string;
-  webhook_secret: string;
-  is_test_mode: boolean;
 }
 
 interface AnnouncementSettings {
@@ -57,12 +63,18 @@ export default function AdminSettings() {
     twitter: null,
     youtube: null,
   });
-  const [razorpay, setRazorpay] = useState<RazorpaySettings>({
+  const [razorpayStatus, setRazorpayStatus] = useState<RazorpayConnectionStatus>({
+    connected: false,
+    is_test_mode: false,
+    key_id_preview: null,
+    connected_at: null,
+  });
+  const [razorpayForm, setRazorpayForm] = useState<RazorpayFormData>({
     key_id: '',
     key_secret: '',
-    webhook_secret: '',
-    is_test_mode: true,
   });
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [announcement, setAnnouncement] = useState<AnnouncementSettings>({
     text: 'Free shipping on orders above ₹500 | Use code WELCOME10 for 10% off',
     is_active: true,
@@ -97,7 +109,13 @@ export default function AdminSettings() {
             setSocial(value as unknown as SocialLinks);
             break;
           case 'razorpay':
-            setRazorpay(value as unknown as RazorpaySettings);
+            const rpVal = value as any;
+            setRazorpayStatus({
+              connected: rpVal.is_connected || false,
+              is_test_mode: rpVal.is_test_mode || false,
+              key_id_preview: rpVal.key_id_preview || null,
+              connected_at: rpVal.connected_at || null,
+            });
             break;
           case 'announcement':
             setAnnouncement(value as unknown as AnnouncementSettings);
@@ -139,6 +157,78 @@ export default function AdminSettings() {
     }
     setIsSaving(null);
   };
+
+  const handleRazorpayConnect = useCallback(async () => {
+    if (!razorpayForm.key_id || !razorpayForm.key_secret) {
+      toast({ title: 'Error', description: 'Please enter both API Key ID and Secret', variant: 'destructive' });
+      return;
+    }
+    setIsConnecting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(
+        `https://riqjidlyjyhfpgnjtbqi.supabase.co/functions/v1/razorpay-settings?action=connect`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            key_id: razorpayForm.key_id,
+            key_secret: razorpayForm.key_secret,
+          }),
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to connect');
+
+      setRazorpayStatus({
+        connected: true,
+        is_test_mode: result.is_test_mode,
+        key_id_preview: `${razorpayForm.key_id.substring(0, 8)}...${razorpayForm.key_id.substring(razorpayForm.key_id.length - 4)}`,
+        connected_at: new Date().toISOString(),
+      });
+      setRazorpayForm({ key_id: '', key_secret: '' });
+      toast({ title: 'Connected!', description: 'Razorpay payment gateway connected successfully.' });
+    } catch (error: any) {
+      toast({ title: 'Connection Failed', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [razorpayForm, toast]);
+
+  const handleRazorpayDisconnect = useCallback(async () => {
+    setIsDisconnecting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(
+        `https://riqjidlyjyhfpgnjtbqi.supabase.co/functions/v1/razorpay-settings?action=disconnect`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to disconnect');
+
+      setRazorpayStatus({ connected: false, is_test_mode: false, key_id_preview: null, connected_at: null });
+      toast({ title: 'Disconnected', description: 'Razorpay has been disconnected.' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsDisconnecting(false);
+    }
+  }, [toast]);
 
   if (isLoading) {
     return (
@@ -522,88 +612,183 @@ export default function AdminSettings() {
 
         {/* Payment / Razorpay */}
         <TabsContent value="payment">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Payment Gateway - Razorpay
-              </CardTitle>
-              <CardDescription>Configure your Razorpay integration for online payments</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-amber-50 dark:bg-amber-950">
-                <div>
-                  <Label className="text-base font-medium">Test Mode</Label>
-                  <p className="text-sm text-muted-foreground">Use test credentials for development</p>
+          <div className="space-y-6">
+            {/* Connection Status Card */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Razorpay Payment Gateway</CardTitle>
+                      <CardDescription>Accept online payments via Razorpay</CardDescription>
+                    </div>
+                  </div>
+                  {razorpayStatus.connected ? (
+                    <Badge variant="default" className="gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Connected
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="gap-1.5">
+                      <XCircle className="h-3.5 w-3.5" />
+                      Not Connected
+                    </Badge>
+                  )}
                 </div>
-                <Switch
-                  checked={razorpay.is_test_mode}
-                  onCheckedChange={(checked) => setRazorpay({ ...razorpay, is_test_mode: checked })}
-                />
-              </div>
+              </CardHeader>
 
-              <Separator />
+              {razorpayStatus.connected && (
+                <CardContent>
+                  <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">API Key</p>
+                        <p className="text-sm text-muted-foreground font-mono">{razorpayStatus.key_id_preview}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">Mode</p>
+                        <Badge variant={razorpayStatus.is_test_mode ? "outline" : "default"} className="mt-0.5">
+                          {razorpayStatus.is_test_mode ? '🧪 Test Mode' : '🟢 Live Mode'}
+                        </Badge>
+                      </div>
+                    </div>
+                    {razorpayStatus.connected_at && (
+                      <p className="text-xs text-muted-foreground">
+                        Connected on {new Date(razorpayStatus.connected_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    )}
+                    <Separator />
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={handleRazorpayDisconnect}
+                      disabled={isDisconnecting}
+                      className="gap-2"
+                    >
+                      {isDisconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unplug className="h-4 w-4" />}
+                      Disconnect Razorpay
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="razorpay_key_id">API Key ID</Label>
-                <Input
-                  id="razorpay_key_id"
-                  value={razorpay.key_id}
-                  onChange={(e) => setRazorpay({ ...razorpay, key_id: e.target.value })}
-                  placeholder={razorpay.is_test_mode ? "rzp_test_xxxxx" : "rzp_live_xxxxx"}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Found in Razorpay Dashboard → Settings → API Keys
-                </p>
-              </div>
+            {/* Connect Form - shown only when not connected */}
+            {!razorpayStatus.connected && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Shield className="h-5 w-5" />
+                    Connect Your Razorpay Account
+                  </CardTitle>
+                  <CardDescription>
+                    Enter your Razorpay API credentials to start accepting payments. Your keys are securely stored and encrypted.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="razorpay_key_id">API Key ID</Label>
+                    <Input
+                      id="razorpay_key_id"
+                      value={razorpayForm.key_id}
+                      onChange={(e) => setRazorpayForm({ ...razorpayForm, key_id: e.target.value })}
+                      placeholder="rzp_test_xxxxx or rzp_live_xxxxx"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Found in Razorpay Dashboard → Settings → API Keys
+                    </p>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="razorpay_key_secret">API Key Secret</Label>
-                <Input
-                  id="razorpay_key_secret"
-                  type="password"
-                  value={razorpay.key_secret}
-                  onChange={(e) => setRazorpay({ ...razorpay, key_secret: e.target.value })}
-                  placeholder="Enter your secret key"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Keep this secret! Never share it publicly.
-                </p>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="razorpay_key_secret">API Key Secret</Label>
+                    <Input
+                      id="razorpay_key_secret"
+                      type="password"
+                      value={razorpayForm.key_secret}
+                      onChange={(e) => setRazorpayForm({ ...razorpayForm, key_secret: e.target.value })}
+                      placeholder="Enter your secret key"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Your secret key is never displayed after saving.
+                    </p>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="razorpay_webhook_secret">Webhook Secret</Label>
-                <Input
-                  id="razorpay_webhook_secret"
-                  type="password"
-                  value={razorpay.webhook_secret}
-                  onChange={(e) => setRazorpay({ ...razorpay, webhook_secret: e.target.value })}
-                  placeholder="Enter webhook secret"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Found in Razorpay Dashboard → Settings → Webhooks
-                </p>
-              </div>
+                  <Button
+                    onClick={handleRazorpayConnect}
+                    disabled={isConnecting || !razorpayForm.key_id || !razorpayForm.key_secret}
+                    className="w-full gap-2"
+                    size="lg"
+                  >
+                    {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    {isConnecting ? 'Validating & Connecting...' : 'Connect Razorpay'}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
-              <div className="p-4 border rounded-lg bg-muted/50">
-                <h4 className="font-medium mb-2">Webhook URL</h4>
-                <code className="text-sm bg-background px-2 py-1 rounded block overflow-x-auto">
-                  {window.location.origin}/api/webhooks/razorpay
-                </code>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Add this URL in your Razorpay Dashboard under Webhooks. Enable events: payment.captured, payment.failed, refund.created
-                </p>
-              </div>
+            {/* Setup Guide */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">How to Get Your API Keys</CardTitle>
+                <CardDescription>Follow these steps to generate your Razorpay API credentials</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ol className="space-y-4 text-sm">
+                  <li className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
+                    <div>
+                      <p className="font-medium">Log in to your Razorpay Dashboard</p>
+                      <p className="text-muted-foreground">Go to <a href="https://dashboard.razorpay.com" target="_blank" rel="noopener noreferrer" className="text-primary underline inline-flex items-center gap-1">dashboard.razorpay.com <ExternalLink className="h-3 w-3" /></a></p>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
+                    <div>
+                      <p className="font-medium">Navigate to Settings → API Keys</p>
+                      <p className="text-muted-foreground">Or go directly to <a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noopener noreferrer" className="text-primary underline inline-flex items-center gap-1">dashboard.razorpay.com/app/keys <ExternalLink className="h-3 w-3" /></a></p>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
+                    <div>
+                      <p className="font-medium">Generate a new API Key</p>
+                      <p className="text-muted-foreground">Copy both the Key ID (starts with rzp_) and the Key Secret</p>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">4</span>
+                    <div>
+                      <p className="font-medium">Paste credentials above and click Connect</p>
+                      <p className="text-muted-foreground">We'll validate your keys with Razorpay before saving. Use test keys (rzp_test_) for development.</p>
+                    </div>
+                  </li>
+                </ol>
+              </CardContent>
+            </Card>
 
-              <Button 
-                onClick={() => handleSave('razorpay', razorpay as unknown as Record<string, unknown>)} 
-                disabled={isSaving === 'razorpay'}
-              >
-                {isSaving === 'razorpay' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                Save Payment Settings
-              </Button>
-            </CardContent>
-          </Card>
+            {/* Webhook Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Webhook Configuration (Optional)</CardTitle>
+                <CardDescription>Set up webhooks for real-time payment notifications</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 border rounded-lg bg-muted/30">
+                  <p className="text-sm font-medium mb-1">Your Webhook URL</p>
+                  <code className="text-sm bg-background px-3 py-2 rounded-md block overflow-x-auto border">
+                    https://riqjidlyjyhfpgnjtbqi.supabase.co/functions/v1/razorpay-verify-payment
+                  </code>
+                </div>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>Add this URL in your Razorpay Dashboard → Settings → Webhooks.</p>
+                  <p>Enable events: <code className="bg-muted px-1 rounded">payment.captured</code>, <code className="bg-muted px-1 rounded">payment.failed</code>, <code className="bg-muted px-1 rounded">refund.created</code></p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Social */}
