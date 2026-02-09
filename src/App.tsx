@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import NotFound from "./pages/NotFound";
 import CustomerAuth from "./pages/auth/CustomerAuth";
 import AdminAuth from "./pages/auth/AdminAuth";
@@ -21,6 +22,7 @@ import AdminCustomers from "./pages/admin/Customers";
 import AdminReports from "./pages/admin/Reports";
 import AdminSettings from "./pages/admin/Settings";
 import AdminStorefront from "./pages/admin/Storefront";
+import AdminAnalytics from "./pages/admin/Analytics";
 
 // Public storefront pages
 import HomePage from "./pages/store/Home";
@@ -41,7 +43,14 @@ import TermsConditionsPage from "./pages/store/TermsConditions";
 import ContactUsPage from "./pages/store/ContactUs";
 import FAQPage from "./pages/store/FAQ";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, isLoading } = useAuth();
@@ -52,48 +61,52 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 const AppRoutes = () => (
-  <Routes>
-    {/* Public Storefront */}
-    <Route path="/" element={<HomePage />} />
-    <Route path="/products" element={<ProductsPage />} />
-    <Route path="/product/:slug" element={<ProductDetailPage />} />
-    <Route path="/cart" element={<CartPage />} />
-    <Route path="/checkout" element={<CheckoutPage />} />
-    <Route path="/order-success" element={<OrderSuccessPage />} />
-    <Route path="/auth" element={<CustomerAuth />} />
-    <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
-    <Route path="/return-policy" element={<ReturnPolicyPage />} />
-    <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-    <Route path="/terms" element={<TermsConditionsPage />} />
-    <Route path="/contact" element={<ContactUsPage />} />
-    <Route path="/faq" element={<FAQPage />} />
-    
-    {/* User Account */}
-    <Route path="/account" element={<AccountPage />}>
-      <Route index element={<MyOrdersPage />} />
-      <Route path="order/:orderId" element={<OrderTrackingPage />} />
-      <Route path="addresses" element={<SavedAddressesPage />} />
-      <Route path="profile" element={<ProfileSettingsPage />} />
-    </Route>
+  <>
+    <ScrollToTop />
+    <Routes>
+      {/* Public Storefront */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/products" element={<ProductsPage />} />
+      <Route path="/product/:slug" element={<ProductDetailPage />} />
+      <Route path="/cart" element={<CartPage />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/order-success" element={<OrderSuccessPage />} />
+      <Route path="/auth" element={<CustomerAuth />} />
+      <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+      <Route path="/return-policy" element={<ReturnPolicyPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsConditionsPage />} />
+      <Route path="/contact" element={<ContactUsPage />} />
+      <Route path="/faq" element={<FAQPage />} />
+      
+      {/* User Account */}
+      <Route path="/account" element={<AccountPage />}>
+        <Route index element={<MyOrdersPage />} />
+        <Route path="order/:orderId" element={<OrderTrackingPage />} />
+        <Route path="addresses" element={<SavedAddressesPage />} />
+        <Route path="profile" element={<ProfileSettingsPage />} />
+      </Route>
 
-    {/* Admin */}
-    <Route path="/admin/login" element={<AdminAuth />} />
-    <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-    <Route path="/admin/storefront" element={<AdminRoute><AdminStorefront /></AdminRoute>} />
-    <Route path="/admin/banners" element={<AdminRoute><AdminBanners /></AdminRoute>} />
-    <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
-    <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
-    <Route path="/admin/offers" element={<AdminRoute><AdminOffers /></AdminRoute>} />
-    <Route path="/admin/coupons" element={<AdminRoute><AdminCoupons /></AdminRoute>} />
-    <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
-    <Route path="/admin/deliveries" element={<AdminRoute><AdminDeliveries /></AdminRoute>} />
-    <Route path="/admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
-    <Route path="/admin/expenses" element={<AdminRoute><AdminExpenses /></AdminRoute>} />
-    <Route path="/admin/customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
-    <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
-    <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-    <Route path="*" element={<NotFound />} />
-  </Routes>
+      {/* Admin */}
+      <Route path="/admin/login" element={<AdminAuth />} />
+      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route path="/admin/storefront" element={<AdminRoute><AdminStorefront /></AdminRoute>} />
+      <Route path="/admin/banners" element={<AdminRoute><AdminBanners /></AdminRoute>} />
+      <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+      <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
+      <Route path="/admin/offers" element={<AdminRoute><AdminOffers /></AdminRoute>} />
+      <Route path="/admin/coupons" element={<AdminRoute><AdminCoupons /></AdminRoute>} />
+      <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+      <Route path="/admin/deliveries" element={<AdminRoute><AdminDeliveries /></AdminRoute>} />
+      <Route path="/admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
+      <Route path="/admin/expenses" element={<AdminRoute><AdminExpenses /></AdminRoute>} />
+      <Route path="/admin/customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
+      <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+      <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+      <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  </>
 );
 
 const App = () => (

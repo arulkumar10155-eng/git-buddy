@@ -25,6 +25,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const menuItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { path: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/admin/storefront', icon: Palette, label: 'Storefront Builder' },
   { path: '/admin/banners', icon: Image, label: 'Banners & Media' },
   { path: '/admin/products', icon: Package, label: 'Products' },
