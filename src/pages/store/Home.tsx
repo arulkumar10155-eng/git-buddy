@@ -230,18 +230,18 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Featured Products */}
-      {featuredProducts.length > 0 && (
+      {/* Best Sellers (moved before Featured) */}
+      {bestsellerProducts.length > 0 && (
         <section className="bg-muted py-8 md:py-10">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-foreground">Featured Products</h2>
+              <h2 className="text-xl md:text-2xl font-bold text-foreground">Best Sellers</h2>
               <Button variant="ghost" asChild size="sm">
-                <Link to="/products?featured=true">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
+                <Link to="/products?bestseller=true">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
               </Button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-              {featuredProducts.map((product) => (
+              {bestsellerProducts.map((product) => (
                 <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} productOffer={getProductOffer(product)} />
               ))}
             </div>
@@ -299,17 +299,17 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Bestsellers */}
-      {bestsellerProducts.length > 0 && (
+      {/* Featured Products */}
+      {featuredProducts.length > 0 && (
         <section className="container mx-auto px-4 py-8 md:py-10">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">Best Sellers</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-foreground">Featured Products</h2>
             <Button variant="ghost" asChild size="sm">
-              <Link to="/products?bestseller=true">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
+              <Link to="/products?featured=true">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
             </Button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-            {bestsellerProducts.map((product) => (
+            {featuredProducts.map((product) => (
               <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} productOffer={getProductOffer(product)} />
             ))}
           </div>
