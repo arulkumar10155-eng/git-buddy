@@ -241,32 +241,32 @@ export default function ProductDetailPage() {
           <span className="text-foreground">{product.name}</span>
         </nav>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-8 mb-12">
           {/* Images */}
-          <div className="space-y-4">
-            <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
+          <div className="space-y-3">
+            <div className="relative aspect-square bg-muted rounded-lg overflow-hidden max-w-full">
               <img src={currentImage} alt={product.name} className="w-full h-full object-contain" />
               {images.length > 1 && (
                 <>
-                  <Button variant="secondary" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2" onClick={() => setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)}>
-                    <ChevronLeft className="h-5 w-5" />
+                  <Button variant="secondary" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)}>
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <Button variant="secondary" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setCurrentImageIndex((prev) => (prev + 1) % images.length)}>
-                    <ChevronRight className="h-5 w-5" />
+                  <Button variant="secondary" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setCurrentImageIndex((prev) => (prev + 1) % images.length)}>
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 </>
               )}
               {discount > 0 && (
-                <Badge variant="destructive" className="absolute top-4 left-4">{discount}% OFF</Badge>
+                <Badge variant="destructive" className="absolute top-3 left-3">{discount}% OFF</Badge>
               )}
             </div>
             {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
                 {images.map((img, index) => (
                   <button
                     key={img.id}
                     onClick={() => setCurrentImageIndex(index)}
-                    className={`w-16 h-16 rounded-md overflow-hidden border-2 flex-shrink-0 ${index === currentImageIndex ? 'border-primary' : 'border-transparent'}`}
+                    className={`w-14 h-14 rounded-md overflow-hidden border-2 flex-shrink-0 ${index === currentImageIndex ? 'border-primary' : 'border-transparent'}`}
                   >
                     <img src={img.image_url} alt="" className="w-full h-full object-cover" />
                   </button>
@@ -350,16 +350,16 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3">
-              <Button size="lg" className="flex-1" onClick={handleAddToCart} disabled={currentStock <= 0 || isAddingToCart}>
-                {isAddingToCart ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ShoppingCart className="h-5 w-5 mr-2" />}
+            <div className="flex gap-2 flex-wrap">
+              <Button size="default" className="flex-1 min-w-0" onClick={handleAddToCart} disabled={currentStock <= 0 || isAddingToCart}>
+                {isAddingToCart ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ShoppingCart className="h-4 w-4 mr-1.5" />}
                 Add to Cart
               </Button>
-              <Button size="lg" variant="secondary" className="flex-1" onClick={handleBuyNow} disabled={currentStock <= 0}>
+              <Button size="default" variant="secondary" className="flex-1 min-w-0" onClick={handleBuyNow} disabled={currentStock <= 0}>
                 Buy Now
               </Button>
-              <Button variant="outline" size="lg" onClick={handleAddToWishlist}>
-                <Heart className="h-5 w-5" />
+              <Button variant="outline" size="default" onClick={handleAddToWishlist} className="flex-shrink-0">
+                <Heart className="h-4 w-4" />
               </Button>
             </div>
 

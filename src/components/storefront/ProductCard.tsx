@@ -19,6 +19,8 @@ interface ProductCardProps {
   variant?: 'default' | 'compact' | 'horizontal';
   showQuickAdd?: boolean;
   productOffer?: ProductOffer | null;
+  avgRating?: number;
+  reviewCount?: number;
 }
 
 export function ProductCard({
@@ -28,6 +30,8 @@ export function ProductCard({
   variant = 'default',
   showQuickAdd = true,
   productOffer,
+  avgRating = 0,
+  reviewCount = 0,
 }: ProductCardProps) {
   const isOutOfStock = product.stock_quantity <= 0;
   const displayPrice = productOffer?.discountedPrice ?? product.price;
@@ -90,7 +94,7 @@ export function ProductCard({
         <img src={primaryImage} alt={product.name} className={cn("w-full h-full object-cover transition-transform duration-500", !isOutOfStock && "group-hover:scale-105")} />
         
         {/* Badges */}
-        <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1">
+        <div className="absolute top-2 left-2 right-8 flex flex-wrap gap-1">
           {isOutOfStock && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 bg-background/80">Sold Out</Badge>
           )}
@@ -113,10 +117,10 @@ export function ProductCard({
           <Button
             variant="secondary"
             size="icon"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
             onClick={(e) => { e.preventDefault(); onAddToWishlist(product); }}
           >
-            <Heart className="h-4 w-4" />
+            <Heart className="h-3.5 w-3.5" />
           </Button>
         )}
 
@@ -129,40 +133,58 @@ export function ProductCard({
       </Link>
 
       {/* Content */}
-      <div className="p-3">
+      <div className="p-2.5">
         <Link to={`/product/${product.slug}`}>
-          <h3 className={cn("font-medium text-foreground hover:text-primary transition-colors line-clamp-2", variant === 'compact' ? "text-sm" : "text-base")}>
+          <h3 className={cn("font-medium text-foreground hover:text-primary transition-colors line-clamp-1", variant === 'compact' ? "text-xs" : "text-sm")}>
             {product.name}
           </h3>
         </Link>
 
         {product.category && (
-          <p className="text-xs text-muted-foreground mt-1">{product.category.name}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{product.category.name}</p>
+        )}
+
+        {/* Short description */}
+        {product.short_description && (
+          <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{product.short_description}</p>
+        )}
+
+        {/* Rating stars */}
+        {avgRating > 0 && (
+          <div className="flex items-center gap-1 mt-1">
+            <div className="flex items-center">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star key={star} className={cn("h-3 w-3", star <= Math.round(avgRating) ? 'fill-amber-400 text-amber-400' : 'text-muted')} />
+              ))}
+            </div>
+            <span className="text-[10px] text-muted-foreground">({reviewCount})</span>
+          </div>
         )}
 
         {/* Price */}
-        <div className="flex items-center gap-2 mt-2">
-          <span className={cn("font-bold text-foreground", variant === 'compact' ? "text-base" : "text-lg")}>
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <span className={cn("font-bold text-foreground", variant === 'compact' ? "text-sm" : "text-base")}>
             ₹{Number(displayPrice).toFixed(0)}
           </span>
           {hasDiscount && originalPrice && (
-            <span className="text-sm text-muted-foreground line-through">₹{Number(originalPrice).toFixed(0)}</span>
+            <span className="text-xs text-muted-foreground line-through">₹{Number(originalPrice).toFixed(0)}</span>
           )}
         </div>
 
         {/* Quick add button */}
         {showQuickAdd && onAddToCart && !isOutOfStock && (
           <Button
-            className="w-full mt-3 opacity-0 group-hover:opacity-100 transition-opacity"
-            size={variant === 'compact' ? 'sm' : 'default'}
+            className="w-full mt-2"
+            size="sm"
+            variant="outline"
             onClick={() => onAddToCart(product)}
           >
-            <ShoppingCart className="h-4 w-4 mr-2" />
+            <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
             Add to Cart
           </Button>
         )}
         {isOutOfStock && (
-          <Button className="w-full mt-3" size={variant === 'compact' ? 'sm' : 'default'} variant="secondary" disabled>
+          <Button className="w-full mt-2" size="sm" variant="secondary" disabled>
             Out of Stock
           </Button>
         )}
