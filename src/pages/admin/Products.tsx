@@ -109,7 +109,14 @@ export default function AdminProducts() {
       stock_quantity: v.stock_quantity?.toString() || '0',
     }));
     
-    setFormData({ ...selectedProduct, imageUrls, productType: 'general' });
+    // Detect product type from variants
+    let detectedType = 'general';
+    if (existingVariants.length > 0) {
+      const names = existingVariants.map(v => v.name.toUpperCase());
+      if (names.some(n => CLOTHING_SIZES.includes(n))) detectedType = 'clothing';
+      else if (names.some(n => FOOTWEAR_SIZES.includes(n))) detectedType = 'footwear';
+    }
+    setFormData({ ...selectedProduct, imageUrls, productType: detectedType });
     setVariantForms(existingVariants);
     setIsDetailOpen(false);
     setIsFormOpen(true);
@@ -172,6 +179,11 @@ export default function AdminProducts() {
   const handleSave = async () => {
     if (!formData.name || !formData.price) {
       toast({ title: 'Error', description: 'Name and price are required', variant: 'destructive' });
+      return;
+    }
+    // Clothing/footwear must have variants
+    if ((formData.productType === 'clothing' || formData.productType === 'footwear') && variantForms.filter(v => v.name.trim()).length === 0) {
+      toast({ title: 'Variants Required', description: 'Clothing and footwear products must have at least one variant (size)', variant: 'destructive' });
       return;
     }
 
@@ -565,8 +577,12 @@ export default function AdminProducts() {
             <TabsContent value="variants" className="space-y-4 mt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-base font-semibold">Product Variants</Label>
-                  <p className="text-sm text-muted-foreground">Add sizes, colors, or other customization options</p>
+              <Label className="text-base font-semibold">Product Variants {(formData.productType === 'clothing' || formData.productType === 'footwear') && <span className="text-destructive">*</span>}</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {(formData.productType === 'clothing' || formData.productType === 'footwear') 
+                      ? 'Variants are mandatory for clothing/footwear products' 
+                      : 'Add sizes, colors, or other customization options'}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   {(formData.productType === 'clothing' || formData.productType === 'footwear') && (

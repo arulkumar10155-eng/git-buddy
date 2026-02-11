@@ -157,6 +157,7 @@ export default function AdminOffers() {
       end_date: formData.end_date,
       is_active: formData.is_active ?? true,
       auto_apply: formData.auto_apply ?? false,
+      show_timer: (formData as any).show_timer ?? false,
     };
 
     if (selectedOffer) {
@@ -431,7 +432,7 @@ export default function AdminOffers() {
               />
             </div>
 
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-6">
               <div className="flex items-center gap-2">
                 <Switch
                   id="is_active"
@@ -447,6 +448,14 @@ export default function AdminOffers() {
                   onCheckedChange={(checked) => setFormData({ ...formData, auto_apply: checked })}
                 />
                 <Label htmlFor="auto_apply">Auto Apply</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show_timer"
+                  checked={(formData as any).show_timer || false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, show_timer: checked } as any)}
+                />
+                <Label htmlFor="show_timer">Show Timer on Product Card</Label>
               </div>
             </div>
 

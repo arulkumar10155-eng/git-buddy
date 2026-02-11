@@ -58,7 +58,7 @@ export default function ProductDetailPage() {
 
     const [variantsRes, reviewsRes] = await Promise.all([
       supabase.from('product_variants').select('*').eq('product_id', productData.id).eq('is_active', true),
-      supabase.from('reviews').select('*, profile:profiles(full_name)').eq('product_id', productData.id).eq('is_approved', true).order('created_at', { ascending: false }).limit(20),
+      supabase.from('reviews').select('*, profile:profiles(full_name)').eq('product_id', productData.id).order('created_at', { ascending: false }).limit(20),
     ]);
 
     setVariants((variantsRes.data || []) as ProductVariant[]);
@@ -173,7 +173,6 @@ export default function ProductDetailPage() {
         .from('reviews')
         .select('*, profile:profiles(full_name)')
         .eq('product_id', product.id)
-        .eq('is_approved', true)
         .order('created_at', { ascending: false })
         .limit(20);
       setReviews((data || []) as unknown as Review[]);

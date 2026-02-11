@@ -315,9 +315,38 @@ export default function AdminOrders() {
                     </SelectContent>
                   </Select>
                   {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
-                  <Badge variant={selectedOrder.payment_status === 'paid' ? 'default' : 'secondary'}>
-                    Payment: {selectedOrder.payment_status}
-                  </Badge>
+                  {/* Payment status - editable for COD */}
+                  {selectedOrder.payment_method === 'cod' ? (
+                    <Select
+                      value={selectedOrder.payment_status}
+                      onValueChange={async (val) => {
+                        const typedVal = val as 'pending' | 'paid' | 'failed' | 'refunded' | 'partial';
+                        await supabase.from('orders').update({ payment_status: typedVal }).eq('id', selectedOrder.id);
+                        // Also update payment record
+                        const { data: paymentRecord } = await supabase.from('payments').select('id').eq('order_id', selectedOrder.id).eq('method', 'cod').single();
+                        if (paymentRecord) {
+                          await supabase.from('payments').update({ status: typedVal }).eq('id', paymentRecord.id);
+                        }
+                        setSelectedOrder({ ...selectedOrder, payment_status: typedVal });
+                        fetchOrders();
+                        toast({ title: 'Payment status updated' });
+                      }}
+                    >
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="paid">Received</SelectItem>
+                        <SelectItem value="partial">Partial</SelectItem>
+                        <SelectItem value="failed">Failed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant={selectedOrder.payment_status === 'paid' ? 'default' : 'secondary'}>
+                      Payment: {selectedOrder.payment_status}
+                    </Badge>
+                  )}
                   <Badge variant="outline">{selectedOrder.payment_method?.toUpperCase() || 'N/A'}</Badge>
                 </div>
               </CardContent>

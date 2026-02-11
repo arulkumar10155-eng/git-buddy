@@ -496,6 +496,7 @@ export type Database = {
           min_order_value: number | null
           name: string
           product_id: string | null
+          show_timer: boolean | null
           start_date: string | null
           type: Database["public"]["Enums"]["offer_type"]
           updated_at: string | null
@@ -515,6 +516,7 @@ export type Database = {
           min_order_value?: number | null
           name: string
           product_id?: string | null
+          show_timer?: boolean | null
           start_date?: string | null
           type: Database["public"]["Enums"]["offer_type"]
           updated_at?: string | null
@@ -534,6 +536,7 @@ export type Database = {
           min_order_value?: number | null
           name?: string
           product_id?: string | null
+          show_timer?: boolean | null
           start_date?: string | null
           type?: Database["public"]["Enums"]["offer_type"]
           updated_at?: string | null

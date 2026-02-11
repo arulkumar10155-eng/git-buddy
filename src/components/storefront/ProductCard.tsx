@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingCart, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,38 @@ interface ProductCardProps {
   reviewCount?: number;
 }
 
+function OfferTimer({ endDate }: { endDate: string }) {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const calc = () => {
+      const diff = new Date(endDate).getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft('Expired'); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      if (h > 24) {
+        const d = Math.floor(h / 24);
+        setTimeLeft(`${d}d ${h % 24}h`);
+      } else {
+        setTimeLeft(`${h}h ${m}m ${s}s`);
+      }
+    };
+    calc();
+    const interval = setInterval(calc, 1000);
+    return () => clearInterval(interval);
+  }, [endDate]);
+
+  if (!timeLeft || timeLeft === 'Expired') return null;
+
+  return (
+    <div className="flex items-center gap-1 bg-destructive/90 text-destructive-foreground text-[9px] px-1.5 py-0.5 rounded font-medium">
+      <Clock className="h-2.5 w-2.5" />
+      {timeLeft}
+    </div>
+  );
+}
+
 export function ProductCard({
   product,
   onAddToCart,
@@ -36,17 +69,19 @@ export function ProductCard({
   const isOutOfStock = product.stock_quantity <= 0;
   const displayPrice = productOffer?.discountedPrice ?? product.price;
   const originalPrice = productOffer ? product.price : product.mrp;
-  const hasDiscount = productOffer 
-    ? productOffer.discountAmount > 0 
+  const hasDiscount = productOffer
+    ? productOffer.discountAmount > 0
     : (product.mrp && product.mrp > product.price);
   const discountLabel = productOffer?.discountLabel || (
-    product.mrp && product.mrp > product.price 
+    product.mrp && product.mrp > product.price
       ? `${Math.round(((product.mrp - product.price) / product.mrp) * 100)}% OFF`
       : ''
   );
 
+  const showTimer = productOffer?.offer?.end_date && (productOffer.offer as any).show_timer;
+
   const primaryImage = product.images?.find(img => img.is_primary)?.image_url
-    || product.images?.[0]?.image_url 
+    || product.images?.[0]?.image_url
     || '/placeholder.svg';
 
   if (variant === 'horizontal') {
@@ -92,7 +127,7 @@ export function ProductCard({
       {/* Image */}
       <Link to={`/product/${product.slug}`} className="block relative aspect-square overflow-hidden bg-muted">
         <img src={primaryImage} alt={product.name} className={cn("w-full h-full object-cover transition-transform duration-500", !isOutOfStock && "group-hover:scale-105")} />
-        
+
         {/* Badges */}
         <div className="absolute top-2 left-2 right-8 flex flex-wrap gap-1">
           {isOutOfStock && (
@@ -111,6 +146,13 @@ export function ProductCard({
             <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5">Bestseller</Badge>
           )}
         </div>
+
+        {/* Timer */}
+        {showTimer && productOffer?.offer?.end_date && !isOutOfStock && (
+          <div className="absolute bottom-2 left-2">
+            <OfferTimer endDate={productOffer.offer.end_date} />
+          </div>
+        )}
 
         {/* Wishlist button */}
         {onAddToWishlist && !isOutOfStock && (
@@ -173,12 +215,7 @@ export function ProductCard({
 
         {/* Quick add button */}
         {showQuickAdd && onAddToCart && !isOutOfStock && (
-          <Button
-            className="w-full mt-2"
-            size="sm"
-            variant="outline"
-            onClick={() => onAddToCart(product)}
-          >
+          <Button className="w-full mt-2" size="sm" variant="outline" onClick={() => onAddToCart(product)}>
             <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
             Add to Cart
           </Button>
