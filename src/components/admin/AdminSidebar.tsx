@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -15,10 +15,10 @@ import {
   Users,
   BarChart3,
   Settings,
-  ChevronLeft,
-  ChevronRight,
   LogOut,
   Store,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -40,10 +40,39 @@ const menuItems = [
   { path: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 
+// Persist collapsed state
+const COLLAPSED_KEY = 'admin_sidebar_collapsed';
+function getInitialCollapsed() {
+  try { return localStorage.getItem(COLLAPSED_KEY) === 'true'; } catch { return false; }
+}
+
 export function AdminSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsedState] = React.useState(getInitialCollapsed);
   const { signOut, profile } = useAuth();
   const location = useLocation();
+  const navRef = useRef<HTMLElement>(null);
+  const scrollPosRef = useRef(0);
+
+  // Persist collapsed
+  const setCollapsed = (val: boolean) => {
+    setCollapsedState(val);
+    try { localStorage.setItem(COLLAPSED_KEY, String(val)); } catch {}
+  };
+
+  // Save scroll position before navigation re-render
+  useEffect(() => {
+    const nav = navRef.current;
+    if (nav) {
+      // Restore scroll position after route change
+      nav.scrollTop = scrollPosRef.current;
+    }
+  }, [location.pathname]);
+
+  const handleNavScroll = () => {
+    if (navRef.current) {
+      scrollPosRef.current = navRef.current.scrollTop;
+    }
+  };
 
   const isActive = (path: string, exact?: boolean) => {
     if (exact) return location.pathname === path;
@@ -85,21 +114,17 @@ export function AdminSidebar() {
           "bg-card text-foreground hover:bg-accent"
         )}
       >
-        {collapsed ? (
-          <ChevronRight className="h-3 w-3" />
-        ) : (
-          <ChevronLeft className="h-3 w-3" />
-        )}
+        {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
       </Button>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2 scrollbar-thin">
+      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 overflow-y-auto p-2 scrollbar-thin">
         <ul className="space-y-1">
           {menuItems.map((item) => {
-            const active = item.exact 
-              ? location.pathname === item.path 
+            const active = item.exact
+              ? location.pathname === item.path
               : isActive(item.path, item.exact);
-            
+
             return (
               <li key={item.path}>
                 <NavLink
