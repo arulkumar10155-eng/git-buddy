@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import {
-  ArrowLeft, Package, Truck, MapPin, CreditCard, CheckCircle, Clock, XCircle,
-  Loader2, Download, RefreshCw, Search
+  ArrowLeft, Package, Truck, MapPin, CreditCard, Loader2, Download, RefreshCw, Search
 } from 'lucide-react';
 import type { Order, OrderItem, OrderStatus, ShippingAddress, Delivery, DeliveryStatus, Payment } from '@/types/database';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,9 +20,34 @@ import jsPDF from 'jspdf';
 const ORDER_STATUSES: OrderStatus[] = ['new', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled', 'returned'];
 const DELIVERY_STATUSES: DeliveryStatus[] = ['pending', 'assigned', 'picked', 'in_transit', 'delivered', 'failed'];
 
-const statusColors: Record<OrderStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  new: 'secondary', confirmed: 'default', packed: 'default', shipped: 'default',
-  delivered: 'default', cancelled: 'destructive', returned: 'destructive',
+// Different colors for order statuses
+const orderStatusColors: Record<OrderStatus, string> = {
+  new: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  confirmed: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+  packed: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  shipped: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+  delivered: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  returned: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+};
+
+// Different colors for payment statuses
+const paymentStatusColors: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  paid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  refunded: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  partial: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+};
+
+// Different colors for delivery statuses
+const deliveryStatusColors: Record<string, string> = {
+  pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+  assigned: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  picked: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+  in_transit: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+  delivered: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
 export default function AdminOrders() {
@@ -137,7 +161,6 @@ export default function AdminOrders() {
     const doc = new jsPDF();
     const addr = getAddress();
     
-    // Header
     doc.setFontSize(18);
     doc.text('INVOICE', 105, 20, { align: 'center' });
     doc.setFontSize(10);
@@ -146,7 +169,6 @@ export default function AdminOrders() {
     doc.text(`Status: ${selectedOrder.status.toUpperCase()}`, 15, 49);
     doc.text(`Payment: ${selectedOrder.payment_status?.toUpperCase()} (${selectedOrder.payment_method?.toUpperCase() || 'N/A'})`, 15, 56);
 
-    // Shipping address
     if (addr) {
       doc.setFontSize(11);
       doc.text('Ship To:', 130, 35);
@@ -158,7 +180,6 @@ export default function AdminOrders() {
       doc.text(`Phone: ${addr.mobile_number}`, 130, addr.address_line2 ? 66 : 60);
     }
 
-    // Items table header
     let y = 75;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
@@ -181,7 +202,6 @@ export default function AdminOrders() {
       y += 7;
     });
 
-    // Totals
     y += 5;
     doc.line(130, y, 195, y);
     y += 7;
@@ -196,57 +216,101 @@ export default function AdminOrders() {
 
   const generateChallanPDF = () => {
     if (!selectedOrder) return;
-    const doc = new jsPDF();
+    // Rectangle/landscape format challan
+    const doc = new jsPDF({ orientation: 'landscape', format: [150, 210] });
     const addr = getAddress();
+    const pw = 210;
+    const ph = 150;
 
-    doc.setFontSize(16);
-    doc.text('DELIVERY CHALLAN', 105, 20, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text(`Order #: ${selectedOrder.order_number}`, 15, 35);
-    doc.text(`Date: ${new Date(selectedOrder.created_at).toLocaleDateString('en-IN')}`, 15, 42);
+    // Border
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.rect(5, 5, pw - 10, ph - 10);
 
+    // Company header
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DELIVERY CHALLAN', pw / 2, 15, { align: 'center' });
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Order #: ${selectedOrder.order_number}`, 10, 23);
+    doc.text(`Date: ${new Date(selectedOrder.created_at).toLocaleDateString('en-IN')}`, pw - 10, 23, { align: 'right' });
+
+    // Divider
+    doc.line(5, 26, pw - 5, 26);
+
+    // Shipping address box
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('DELIVER TO:', 10, 32);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
     if (addr) {
-      doc.setFontSize(11);
-      doc.text('Deliver To:', 15, 55);
-      doc.setFontSize(10);
-      doc.text(addr.full_name, 15, 63);
-      doc.text(addr.address_line1, 15, 70);
-      if (addr.address_line2) doc.text(addr.address_line2, 15, 77);
-      let ay = addr.address_line2 ? 84 : 77;
-      doc.text(`${addr.city}, ${addr.state} - ${addr.pincode}`, 15, ay);
-      doc.text(`Phone: ${addr.mobile_number}`, 15, ay + 7);
-      if (addr.landmark) doc.text(`Landmark: ${addr.landmark}`, 15, ay + 14);
+      let ay = 37;
+      doc.text(addr.full_name, 10, ay); ay += 4;
+      doc.text(addr.address_line1, 10, ay); ay += 4;
+      if (addr.address_line2) { doc.text(addr.address_line2, 10, ay); ay += 4; }
+      doc.text(`${addr.city}, ${addr.state} - ${addr.pincode}`, 10, ay); ay += 4;
+      doc.text(`Phone: ${addr.mobile_number}`, 10, ay);
+      if (addr.landmark) { ay += 4; doc.text(`Landmark: ${addr.landmark}`, 10, ay); }
     }
 
-    let y = 110;
-    doc.setFontSize(9);
+    // Contact info on right
     doc.setFont('helvetica', 'bold');
-    doc.text('S.No', 15, y);
-    doc.text('Item', 30, y);
+    doc.setFontSize(8);
+    doc.text('PAYMENT:', pw / 2 + 10, 32);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text(`Method: ${selectedOrder.payment_method?.toUpperCase() || 'N/A'}`, pw / 2 + 10, 37);
+    doc.text(`Status: ${selectedOrder.payment_status?.toUpperCase()}`, pw / 2 + 10, 41);
+
+    // Items table
+    let y = 60;
+    doc.line(5, y - 2, pw - 5, y - 2);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.text('S.No', 10, y);
+    doc.text('Product', 25, y);
     doc.text('Variant', 110, y);
-    doc.text('Qty', 160, y);
-    y += 3;
-    doc.line(15, y, 195, y);
+    doc.text('Qty', 150, y);
+    doc.text('Price', 170, y);
+    doc.text('Total', 190, y);
+    y += 2;
+    doc.line(5, y, pw - 5, y);
     y += 5;
 
     doc.setFont('helvetica', 'normal');
     orderItems.forEach((item, idx) => {
-      doc.text(String(idx + 1), 15, y);
-      doc.text(item.product_name.substring(0, 45), 30, y);
+      doc.text(String(idx + 1), 10, y);
+      doc.text(item.product_name.substring(0, 45), 25, y);
       doc.text(item.variant_name || '-', 110, y);
-      doc.text(String(item.quantity), 160, y);
-      y += 7;
+      doc.text(String(item.quantity), 150, y);
+      doc.text(`₹${Number(item.price).toFixed(0)}`, 170, y);
+      doc.text(`₹${Number(item.total).toFixed(0)}`, 190, y);
+      y += 5;
     });
 
+    // Total line
+    doc.line(5, y, pw - 5, y);
+    y += 4;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total: ₹${Number(selectedOrder.total).toFixed(0)}`, 190, y, { align: 'right' });
+
     if (delivery?.is_cod) {
-      y += 10;
-      doc.setFont('helvetica', 'bold');
-      doc.text(`COD Amount to Collect: ₹${Number(delivery.cod_amount).toFixed(2)}`, 15, y);
+      y += 6;
+      doc.setFontSize(8);
+      doc.text(`COD Amount to Collect: ₹${Number(delivery.cod_amount).toFixed(0)}`, 10, y);
     }
 
-    y += 20;
-    doc.text('Received By: ___________________', 15, y);
-    doc.text('Date: ___________________', 120, y);
+    // Footer
+    y = ph - 20;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text('Received By: ___________________', 10, y);
+    doc.text('Date: ___________________', pw / 2, y);
+    doc.text('Signature: ___________________', pw - 60, y);
 
     doc.save(`Challan-${selectedOrder.order_number}.pdf`);
   };
@@ -260,11 +324,11 @@ export default function AdminOrders() {
     const address = getAddress();
     return (
       <AdminLayout title={`Order ${selectedOrder.order_number}`} description="Manage order details">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <Button variant="ghost" onClick={handleBack} size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={generateInvoicePDF}>
               <Download className="h-4 w-4 mr-1" /> Invoice
             </Button>
@@ -306,48 +370,51 @@ export default function AdminOrders() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <Select value={selectedOrder.status} onValueChange={handleStatusUpdate} disabled={isUpdating}>
-                    <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {ORDER_STATUSES.map(s => (
-                        <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {/* Payment status - editable for COD */}
-                  {selectedOrder.payment_method === 'cod' ? (
-                    <Select
-                      value={selectedOrder.payment_status}
-                      onValueChange={async (val) => {
-                        const typedVal = val as 'pending' | 'paid' | 'failed' | 'refunded' | 'partial';
-                        await supabase.from('orders').update({ payment_status: typedVal }).eq('id', selectedOrder.id);
-                        // Also update payment record
-                        const { data: paymentRecord } = await supabase.from('payments').select('id').eq('order_id', selectedOrder.id).eq('method', 'cod').single();
-                        if (paymentRecord) {
-                          await supabase.from('payments').update({ status: typedVal }).eq('id', paymentRecord.id);
-                        }
-                        setSelectedOrder({ ...selectedOrder, payment_status: typedVal });
-                        fetchOrders();
-                        toast({ title: 'Payment status updated' });
-                      }}
-                    >
-                      <SelectTrigger className="w-36">
-                        <SelectValue />
-                      </SelectTrigger>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Order Status</Label>
+                    <Select value={selectedOrder.status} onValueChange={handleStatusUpdate} disabled={isUpdating}>
+                      <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="paid">Received</SelectItem>
-                        <SelectItem value="partial">Partial</SelectItem>
-                        <SelectItem value="failed">Failed</SelectItem>
+                        {ORDER_STATUSES.map(s => (
+                          <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                  ) : (
-                    <Badge variant={selectedOrder.payment_status === 'paid' ? 'default' : 'secondary'}>
-                      Payment: {selectedOrder.payment_status}
-                    </Badge>
-                  )}
-                  <Badge variant="outline">{selectedOrder.payment_method?.toUpperCase() || 'N/A'}</Badge>
+                  </div>
+                  {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {/* Payment status */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">Payment</Label>
+                    {selectedOrder.payment_method === 'cod' ? (
+                      <Select
+                        value={selectedOrder.payment_status}
+                        onValueChange={async (val) => {
+                          const typedVal = val as 'pending' | 'paid' | 'failed' | 'refunded' | 'partial';
+                          await supabase.from('orders').update({ payment_status: typedVal }).eq('id', selectedOrder.id);
+                          const { data: paymentRecord } = await supabase.from('payments').select('id').eq('order_id', selectedOrder.id).eq('method', 'cod').single();
+                          if (paymentRecord) {
+                            await supabase.from('payments').update({ status: typedVal }).eq('id', paymentRecord.id);
+                          }
+                          setSelectedOrder({ ...selectedOrder, payment_status: typedVal });
+                          fetchOrders();
+                          toast({ title: 'Payment status updated' });
+                        }}
+                      >
+                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="paid">Received</SelectItem>
+                          <SelectItem value="partial">Partial</SelectItem>
+                          <SelectItem value="failed">Failed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${paymentStatusColors[selectedOrder.payment_status] || ''}`}>
+                        {selectedOrder.payment_status}
+                      </span>
+                    )}
+                  </div>
+                  <Badge variant="outline" className="mt-5">{selectedOrder.payment_method?.toUpperCase() || 'N/A'}</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -362,7 +429,9 @@ export default function AdminOrders() {
                       <div>
                         <p className="font-medium text-sm">{item.product_name}</p>
                         {item.variant_name && (
-                          <Badge variant="outline" className="text-xs mt-0.5">Variant: {item.variant_name}</Badge>
+                          <Badge className={`text-[10px] mt-0.5 bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200`}>
+                            {item.variant_name}
+                          </Badge>
                         )}
                         <p className="text-xs text-muted-foreground mt-0.5">SKU: {item.sku || 'N/A'} · Qty: {item.quantity} × ₹{Number(item.price).toFixed(2)}</p>
                       </div>
@@ -518,15 +587,15 @@ export default function AdminOrders() {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm">{order.order_number}</span>
-                    <Badge variant={statusColors[order.status]} className="text-[10px]">
+                    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-medium ${orderStatusColors[order.status]}`}>
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </Badge>
+                    </span>
                   </div>
                   <p className="text-xl font-bold">₹{Number(order.total).toFixed(0)}</p>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <Badge variant={order.payment_status === 'paid' ? 'default' : 'outline'} className="text-[10px]">
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ${paymentStatusColors[order.payment_status] || ''}`}>
                       {order.payment_status}
-                    </Badge>
+                    </span>
                     <span>{new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                   </div>
                   {/* Show item count and variant info */}

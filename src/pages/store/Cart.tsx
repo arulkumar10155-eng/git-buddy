@@ -6,14 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Shimmer } from '@/components/ui/shimmer';
-import type { CartItem, Product, Coupon } from '@/types/database';
+import type { CartItem, Product, Coupon, ProductVariant } from '@/types/database';
 
 interface CartItemWithProduct extends CartItem {
   product: Product;
+  variant?: ProductVariant;
 }
 
 export default function CartPage() {
@@ -42,7 +44,7 @@ export default function CartPage() {
     if (cart) {
       const { data: items } = await supabase
         .from('cart_items')
-        .select('*, product:products(*, images:product_images(*))')
+        .select('*, product:products(*, images:product_images(*)), variant:product_variants(*)')
         .eq('cart_id', cart.id);
       setCartItems((items || []) as CartItemWithProduct[]);
     }
@@ -102,7 +104,10 @@ export default function CartPage() {
     setCouponCode('');
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const subtotal = cartItems.reduce((sum, item) => {
+    const price = item.variant?.price || item.product.price;
+    return sum + (price * item.quantity);
+  }, 0);
   
   const discount = appliedCoupon
     ? appliedCoupon.type === 'percentage'
@@ -112,6 +117,8 @@ export default function CartPage() {
 
   const shippingCharge = subtotal >= 500 ? 0 : 50;
   const total = subtotal - discount + shippingCharge;
+
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   if (!user) {
     return (
@@ -160,50 +167,57 @@ export default function CartPage() {
 
   return (
     <StorefrontLayout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Shopping Cart ({cartItems.length} items)</h1>
+      <div className="container mx-auto px-4 py-6 md:py-8">
+        <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Shopping Cart ({totalItems} {totalItems === 1 ? 'item' : 'items'})</h1>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
           {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-3 md:space-y-4">
             {cartItems.map((item) => {
               const primaryImage = item.product.images?.find(img => img.is_primary)?.image_url
                 || item.product.images?.[0]?.image_url
                 || '/placeholder.svg';
+              const itemPrice = item.variant?.price || item.product.price;
+              const itemMrp = item.variant?.mrp || item.product.mrp;
 
               return (
                 <Card key={item.id}>
-                  <CardContent className="p-4">
-                    <div className="flex gap-4">
-                      <Link to={`/product/${item.product.slug}`} className="w-24 h-24 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex gap-3 md:gap-4">
+                      <Link to={`/product/${item.product.slug}`} className="w-20 h-20 md:w-24 md:h-24 bg-muted rounded-lg overflow-hidden flex-shrink-0">
                         <img src={primaryImage} alt={item.product.name} className="w-full h-full object-cover" />
                       </Link>
                       <div className="flex-1 min-w-0">
                         <Link to={`/product/${item.product.slug}`}>
-                          <h3 className="font-medium hover:text-primary transition-colors">{item.product.name}</h3>
+                          <h3 className="font-medium text-sm md:text-base hover:text-primary transition-colors truncate">{item.product.name}</h3>
                         </Link>
-                        <p className="text-sm text-muted-foreground">
-                          {item.product.mrp && item.product.mrp > item.product.price && (
-                            <span className="line-through mr-2">₹{Number(item.product.mrp).toFixed(0)}</span>
+                        {item.variant && (
+                          <Badge variant="outline" className="text-[10px] mt-0.5">
+                            Variant: {item.variant.name}
+                          </Badge>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {itemMrp && itemMrp > itemPrice && (
+                            <span className="line-through mr-2">₹{Number(itemMrp).toFixed(0)}</span>
                           )}
-                          <span className="font-semibold text-foreground">₹{Number(item.product.price).toFixed(0)}</span>
+                          <span className="font-semibold text-foreground">₹{Number(itemPrice).toFixed(0)}</span>
                         </p>
-                        <div className="flex items-center gap-4 mt-3">
+                        <div className="flex items-center gap-3 md:gap-4 mt-2">
                           <div className="flex items-center border rounded-md">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
+                              className="h-7 w-7 md:h-8 md:w-8"
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
                               disabled={item.quantity <= 1}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
-                            <span className="w-10 text-center text-sm">{item.quantity}</span>
+                            <span className="w-8 md:w-10 text-center text-sm">{item.quantity}</span>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
+                              className="h-7 w-7 md:h-8 md:w-8"
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
                               disabled={item.quantity >= item.product.stock_quantity}
                             >
@@ -213,16 +227,16 @@ export default function CartPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive text-xs h-7"
                             onClick={() => removeItem(item.id)}
                           >
-                            <Trash2 className="h-4 w-4 mr-1" />
+                            <Trash2 className="h-3 w-3 mr-1" />
                             Remove
                           </Button>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold">₹{(item.product.price * item.quantity).toFixed(0)}</p>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-bold text-sm md:text-base">₹{(itemPrice * item.quantity).toFixed(0)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -234,8 +248,8 @@ export default function CartPage() {
           {/* Order Summary */}
           <div>
             <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg">Order Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Coupon */}
@@ -252,8 +266,9 @@ export default function CartPage() {
                         placeholder="Enter coupon code"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        className="text-sm"
                       />
-                      <Button variant="secondary" onClick={applyCoupon} disabled={isApplyingCoupon}>
+                      <Button variant="secondary" size="sm" onClick={applyCoupon} disabled={isApplyingCoupon}>
                         Apply
                       </Button>
                     </div>
@@ -264,7 +279,7 @@ export default function CartPage() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="text-muted-foreground">Subtotal ({totalItems} items)</span>
                     <span>₹{subtotal.toFixed(0)}</span>
                   </div>
                   {discount > 0 && (
@@ -286,7 +301,7 @@ export default function CartPage() {
 
                 <Separator />
 
-                <div className="flex justify-between font-bold text-lg">
+                <div className="flex justify-between font-bold text-base md:text-lg">
                   <span>Total</span>
                   <span>₹{total.toFixed(0)}</span>
                 </div>

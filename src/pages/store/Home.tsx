@@ -27,17 +27,6 @@ function FullPageShimmer() {
         </div>
         <div className="container mx-auto px-4 py-10">
           <Skeleton className="h-8 w-48 mb-6" />
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="text-center">
-                <Skeleton className="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto" />
-                <Skeleton className="h-4 w-16 mx-auto mt-2" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="container mx-auto px-4 py-10">
-          <Skeleton className="h-8 w-48 mb-6" />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg border border-border overflow-hidden">
@@ -84,7 +73,7 @@ export default function HomePage() {
   const { data, isLoading } = useQuery({
     queryKey: ['home-page-data'],
     queryFn: fetchHomeData,
-    staleTime: 5 * 60 * 1000, // 5 min cache
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
@@ -164,15 +153,15 @@ export default function HomePage() {
           </div>
           {banners.length > 1 && (
             <>
-              <Button variant="secondary" size="icon" className="absolute left-4 top-1/2 -translate-y-1/2 z-20 opacity-70 hover:opacity-100" onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}>
-                <ChevronLeft className="h-6 w-6" />
+              <Button variant="secondary" size="icon" className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 opacity-70 hover:opacity-100 h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}>
+                <ChevronLeft className="h-4 w-4 md:h-6 md:w-6" />
               </Button>
-              <Button variant="secondary" size="icon" className="absolute right-4 top-1/2 -translate-y-1/2 z-20 opacity-70 hover:opacity-100" onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}>
-                <ChevronRight className="h-6 w-6" />
+              <Button variant="secondary" size="icon" className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 opacity-70 hover:opacity-100 h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}>
+                <ChevronRight className="h-4 w-4 md:h-6 md:w-6" />
               </Button>
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
                 {banners.map((_, index) => (
-                  <button key={index} className={`w-2.5 h-2.5 rounded-full transition-colors ${index === currentBanner ? 'bg-primary' : 'bg-white/50'}`} onClick={() => setCurrentBanner(index)} />
+                  <button key={index} className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-colors ${index === currentBanner ? 'bg-primary' : 'bg-white/50'}`} onClick={() => setCurrentBanner(index)} />
                 ))}
               </div>
             </>
@@ -181,20 +170,20 @@ export default function HomePage() {
       )}
 
       {/* Features Strip */}
-      <section className="bg-muted py-4">
+      <section className="bg-muted py-3 md:py-4">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {[
               { icon: Truck, title: 'Free Shipping', desc: 'On orders above ₹500' },
               { icon: Shield, title: 'Secure Payment', desc: '100% secure checkout' },
               { icon: RefreshCw, title: 'Easy Returns', desc: '7-day return policy' },
               { icon: Headphones, title: '24/7 Support', desc: 'Dedicated support' },
             ].map((f, i) => (
-              <div key={i} className="flex items-center gap-3 justify-center">
-                <f.icon className="h-5 w-5 md:h-6 md:w-6 text-primary flex-shrink-0" />
+              <div key={i} className="flex items-center gap-2 md:gap-3 justify-center">
+                <f.icon className="h-4 w-4 md:h-6 md:w-6 text-primary flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="font-medium text-xs md:text-sm truncate">{f.title}</p>
-                  <p className="text-[10px] md:text-xs text-muted-foreground truncate">{f.desc}</p>
+                  <p className="font-medium text-[10px] md:text-sm truncate">{f.title}</p>
+                  <p className="text-[9px] md:text-xs text-muted-foreground truncate hidden md:block">{f.desc}</p>
                 </div>
               </div>
             ))}
@@ -204,9 +193,9 @@ export default function HomePage() {
 
       {/* Categories */}
       {categories.length > 0 && (
-        <section className="container mx-auto px-4 py-8 md:py-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">Shop by Category</h2>
+        <section className="container mx-auto px-4 py-6 md:py-10">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h2 className="text-lg md:text-2xl font-bold text-foreground">Shop by Category</h2>
             <Button variant="ghost" asChild size="sm">
               <Link to="/products">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
             </Button>
@@ -214,28 +203,28 @@ export default function HomePage() {
           <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-3 md:gap-4">
             {categories.map((category) => (
               <Link key={category.id} to={`/products?category=${category.slug}`} className="group text-center">
-                <div className="aspect-square rounded-full overflow-hidden bg-muted border-2 border-transparent group-hover:border-primary transition-colors mx-auto w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24">
+                <div className="aspect-square rounded-full overflow-hidden bg-muted border-2 border-transparent group-hover:border-primary transition-colors mx-auto w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
                   {category.image_url ? (
                     <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-secondary">
-                      <span className="text-xl md:text-2xl font-bold text-muted-foreground">{category.name.charAt(0)}</span>
+                      <span className="text-lg md:text-2xl font-bold text-muted-foreground">{category.name.charAt(0)}</span>
                     </div>
                   )}
                 </div>
-                <p className="mt-1.5 text-xs md:text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{category.name}</p>
+                <p className="mt-1 text-[10px] md:text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{category.name}</p>
               </Link>
             ))}
           </div>
         </section>
       )}
 
-      {/* Best Sellers (moved before Featured) */}
+      {/* Best Sellers */}
       {bestsellerProducts.length > 0 && (
-        <section className="bg-muted py-8 md:py-10">
+        <section className="bg-muted py-6 md:py-10">
           <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-foreground">Best Sellers</h2>
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-bold text-foreground">Best Sellers</h2>
               <Button variant="ghost" asChild size="sm">
                 <Link to="/products?bestseller=true">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
               </Button>
@@ -251,8 +240,8 @@ export default function HomePage() {
 
       {/* Middle Banners */}
       {middleBanners.length > 0 && (
-        <section className="container mx-auto px-4 py-8 md:py-10">
-          <div className={`grid gap-4 md:gap-6 ${middleBanners.length === 1 ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
+        <section className="container mx-auto px-4 py-6 md:py-10">
+          <div className={`grid gap-3 md:gap-6 ${middleBanners.length === 1 ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
             {middleBanners.map((banner) => (
               <Card key={banner.id} className="overflow-hidden group cursor-pointer">
                 <CardContent className="p-0">
@@ -269,15 +258,15 @@ export default function HomePage() {
       )}
 
       {middleBanners.length === 0 && (
-        <section className="container mx-auto px-4 py-8 md:py-10">
-          <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+        <section className="container mx-auto px-4 py-6 md:py-10">
+          <div className="grid md:grid-cols-2 gap-3 md:gap-6">
             <Card className="overflow-hidden">
               <CardContent className="p-0 relative">
-                <div className="aspect-[2/1] bg-gradient-to-r from-primary to-primary/80 flex items-center p-6 md:p-8">
+                <div className="aspect-[2/1] bg-gradient-to-r from-primary to-primary/80 flex items-center p-4 md:p-8">
                   <div className="text-primary-foreground">
-                    <p className="text-xs md:text-sm font-medium mb-1">SPECIAL OFFER</p>
-                    <h3 className="text-lg md:text-2xl font-bold mb-2">Up to 50% OFF</h3>
-                    <p className="text-xs md:text-sm opacity-90 mb-3 md:mb-4">On selected items</p>
+                    <p className="text-[10px] md:text-sm font-medium mb-1">SPECIAL OFFER</p>
+                    <h3 className="text-base md:text-2xl font-bold mb-1 md:mb-2">Up to 50% OFF</h3>
+                    <p className="text-[10px] md:text-sm opacity-90 mb-2 md:mb-4">On selected items</p>
                     <Button variant="secondary" size="sm" asChild><Link to="/products?offer=true">Shop Now</Link></Button>
                   </div>
                 </div>
@@ -285,11 +274,11 @@ export default function HomePage() {
             </Card>
             <Card className="overflow-hidden">
               <CardContent className="p-0 relative">
-                <div className="aspect-[2/1] bg-gradient-to-r from-amber-500 to-orange-500 flex items-center p-6 md:p-8">
+                <div className="aspect-[2/1] bg-gradient-to-r from-amber-500 to-orange-500 flex items-center p-4 md:p-8">
                   <div className="text-white">
-                    <p className="text-xs md:text-sm font-medium mb-1">NEW ARRIVALS</p>
-                    <h3 className="text-lg md:text-2xl font-bold mb-2">Fresh Collection</h3>
-                    <p className="text-xs md:text-sm opacity-90 mb-3 md:mb-4">Just dropped this week</p>
+                    <p className="text-[10px] md:text-sm font-medium mb-1">NEW ARRIVALS</p>
+                    <h3 className="text-base md:text-2xl font-bold mb-1 md:mb-2">Fresh Collection</h3>
+                    <p className="text-[10px] md:text-sm opacity-90 mb-2 md:mb-4">Just dropped this week</p>
                     <Button variant="secondary" size="sm" asChild><Link to="/products?new=true">Explore</Link></Button>
                   </div>
                 </div>
@@ -301,9 +290,9 @@ export default function HomePage() {
 
       {/* Featured Products */}
       {featuredProducts.length > 0 && (
-        <section className="container mx-auto px-4 py-8 md:py-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">Featured Products</h2>
+        <section className="container mx-auto px-4 py-6 md:py-10">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h2 className="text-lg md:text-2xl font-bold text-foreground">Featured Products</h2>
             <Button variant="ghost" asChild size="sm">
               <Link to="/products?featured=true">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
             </Button>
@@ -316,18 +305,18 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* New Arrivals */}
+      {/* Check All Products (was New Arrivals) */}
       {newArrivals.length > 0 && (
-        <section className="bg-muted py-8 md:py-10">
+        <section className="bg-muted py-6 md:py-10">
           <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-foreground">New Arrivals</h2>
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-bold text-foreground">Check All Products</h2>
               <Button variant="ghost" asChild size="sm">
-                <Link to="/products?new=true">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
+                <Link to="/products">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
               </Button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-              {newArrivals.map((product) => (
+              {newArrivals.slice(0, 8).map((product) => (
                 <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} productOffer={getProductOffer(product)} />
               ))}
             </div>
