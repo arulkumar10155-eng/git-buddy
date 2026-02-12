@@ -58,11 +58,12 @@ export default function ProductDetailPage() {
 
     const [variantsRes, reviewsRes] = await Promise.all([
       supabase.from('product_variants').select('*').eq('product_id', productData.id).eq('is_active', true),
-      supabase.from('reviews').select('*, profile:profiles(full_name)').eq('product_id', productData.id).order('created_at', { ascending: false }).limit(20),
+      supabase.from('reviews').select('*, profile:profiles(full_name)').eq('product_id', productData.id).order('created_at', { ascending: false }).limit(50),
     ]);
 
     setVariants((variantsRes.data || []) as ProductVariant[]);
-    setReviews((reviewsRes.data || []) as unknown as Review[]);
+    const reviewsList = (reviewsRes.data || []) as unknown as Review[];
+    setReviews(reviewsList);
 
     if (productData.category_id) {
       const { data: relatedData } = await supabase
@@ -174,7 +175,7 @@ export default function ProductDetailPage() {
         .select('*, profile:profiles(full_name)')
         .eq('product_id', product.id)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
       setReviews((data || []) as unknown as Review[]);
     }
     setIsSubmittingReview(false);
@@ -222,28 +223,28 @@ export default function ProductDetailPage() {
 
   return (
     <StorefrontLayout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8 max-w-full overflow-hidden">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link to="/" className="hover:text-primary">Home</Link>
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4 md:mb-6 overflow-x-auto whitespace-nowrap">
+          <Link to="/" className="hover:text-primary flex-shrink-0">Home</Link>
           <span>/</span>
-          <Link to="/products" className="hover:text-primary">Products</Link>
+          <Link to="/products" className="hover:text-primary flex-shrink-0">Products</Link>
           {product.category && (
             <>
               <span>/</span>
-              <Link to={`/products?category=${product.category.slug}`} className="hover:text-primary">
+              <Link to={`/products?category=${product.category.slug}`} className="hover:text-primary flex-shrink-0">
                 {product.category.name}
               </Link>
             </>
           )}
           <span>/</span>
-          <span className="text-foreground">{product.name}</span>
+          <span className="text-foreground truncate">{product.name}</span>
         </nav>
 
-        <div className="grid md:grid-cols-2 gap-6 md:gap-8 mb-12">
+        <div className="grid md:grid-cols-2 gap-4 md:gap-8 mb-8 md:mb-12">
           {/* Images */}
-          <div className="space-y-3">
-            <div className="relative aspect-square bg-muted rounded-lg overflow-hidden max-w-full">
+          <div className="space-y-3 min-w-0">
+            <div className="relative aspect-square bg-muted rounded-lg overflow-hidden w-full">
               <img src={currentImage} alt={product.name} className="w-full h-full object-contain" />
               {images.length > 1 && (
                 <>
@@ -275,32 +276,34 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Product Info */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6 min-w-0">
             <div>
               {product.badge && <Badge className="mb-2">{product.badge}</Badge>}
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">{product.name}</h1>
+              <h1 className="text-xl md:text-3xl font-bold text-foreground">{product.name}</h1>
               {product.short_description && (
-                <p className="text-muted-foreground mt-2">{product.short_description}</p>
+                <p className="text-muted-foreground mt-2 text-sm md:text-base">{product.short_description}</p>
               )}
             </div>
 
             {/* Rating */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className={`h-5 w-5 ${star <= Math.round(avgRating) ? 'fill-amber-400 text-amber-400' : 'text-muted'}`} />
-                ))}
+            {reviews.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star key={star} className={`h-4 w-4 md:h-5 md:w-5 ${star <= Math.round(avgRating) ? 'fill-amber-400 text-amber-400' : 'text-muted'}`} />
+                  ))}
+                </div>
+                <span className="font-medium text-sm">{avgRating.toFixed(1)}</span>
+                <span className="text-muted-foreground text-sm">({reviews.length} reviews)</span>
               </div>
-              <span className="font-medium">{avgRating.toFixed(1)}</span>
-              <span className="text-muted-foreground">({reviews.length} reviews)</span>
-            </div>
+            )}
 
             {/* Price */}
-            <div className="flex items-baseline gap-3">
-              <span className="text-3xl font-bold text-foreground">₹{Number(currentPrice).toFixed(0)}</span>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <span className="text-2xl md:text-3xl font-bold text-foreground">₹{Number(currentPrice).toFixed(0)}</span>
               {currentMrp && currentMrp > currentPrice && (
                 <>
-                  <span className="text-xl text-muted-foreground line-through">₹{Number(currentMrp).toFixed(0)}</span>
+                  <span className="text-lg md:text-xl text-muted-foreground line-through">₹{Number(currentMrp).toFixed(0)}</span>
                   <Badge variant="destructive">{discount}% OFF</Badge>
                 </>
               )}
@@ -309,7 +312,7 @@ export default function ProductDetailPage() {
             {/* Variants */}
             {variants.length > 0 && (
               <div>
-                <Label className="text-base font-semibold">Select Variant</Label>
+                <Label className="text-sm md:text-base font-semibold">Select Variant</Label>
                 <RadioGroup
                   value={selectedVariant?.id || ''}
                   onValueChange={(val) => setSelectedVariant(variants.find(v => v.id === val) || null)}
@@ -320,10 +323,10 @@ export default function ProductDetailPage() {
                       <RadioGroupItem value={variant.id} id={variant.id} className="peer sr-only" />
                       <Label
                         htmlFor={variant.id}
-                        className="flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                        className="flex items-center gap-1.5 px-3 py-1.5 border rounded-md cursor-pointer text-sm peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
                       >
                         {variant.name}
-                        {variant.price && <span className="text-sm">₹{variant.price}</span>}
+                        {variant.price && <span className="text-xs">₹{variant.price}</span>}
                       </Label>
                     </div>
                   ))}
@@ -333,74 +336,74 @@ export default function ProductDetailPage() {
 
             {/* Quantity */}
             <div>
-              <Label className="text-base font-semibold">Quantity</Label>
+              <Label className="text-sm md:text-base font-semibold">Quantity</Label>
               <div className="flex items-center gap-3 mt-2">
-                <Button variant="outline" size="icon" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1}>
                   <Minus className="h-4 w-4" />
                 </Button>
-                <span className="w-12 text-center font-medium">{quantity}</span>
-                <Button variant="outline" size="icon" onClick={() => setQuantity(Math.min(currentStock, quantity + 1))} disabled={quantity >= currentStock}>
+                <span className="w-10 text-center font-medium">{quantity}</span>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setQuantity(Math.min(currentStock, quantity + 1))} disabled={quantity >= currentStock}>
                   <Plus className="h-4 w-4" />
                 </Button>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs md:text-sm text-muted-foreground">
                   {currentStock > 0 ? `${currentStock} available` : 'Out of stock'}
                 </span>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-2 flex-wrap">
-              <Button size="default" className="flex-1 min-w-0" onClick={handleAddToCart} disabled={currentStock <= 0 || isAddingToCart}>
-                {isAddingToCart ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ShoppingCart className="h-4 w-4 mr-1.5" />}
+            {/* Actions - fixed for mobile */}
+            <div className="flex gap-2">
+              <Button size="default" className="flex-1 min-w-0 text-sm" onClick={handleAddToCart} disabled={currentStock <= 0 || isAddingToCart}>
+                {isAddingToCart ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShoppingCart className="h-4 w-4 mr-1" />}
                 Add to Cart
               </Button>
-              <Button size="default" variant="secondary" className="flex-1 min-w-0" onClick={handleBuyNow} disabled={currentStock <= 0}>
+              <Button size="default" variant="secondary" className="flex-1 min-w-0 text-sm" onClick={handleBuyNow} disabled={currentStock <= 0}>
                 Buy Now
               </Button>
-              <Button variant="outline" size="default" onClick={handleAddToWishlist} className="flex-shrink-0">
+              <Button variant="outline" size="icon" className="flex-shrink-0 h-9 w-9" onClick={handleAddToWishlist}>
                 <Heart className="h-4 w-4" />
               </Button>
             </div>
 
             <Separator />
 
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-3 bg-muted rounded-lg">
-                <Truck className="h-6 w-6 mx-auto text-primary mb-1" />
-                <p className="text-xs font-medium">Free Shipping</p>
+            <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
+              <div className="p-2 md:p-3 bg-muted rounded-lg">
+                <Truck className="h-5 w-5 md:h-6 md:w-6 mx-auto text-primary mb-1" />
+                <p className="text-[10px] md:text-xs font-medium">Free Shipping</p>
               </div>
-              <div className="p-3 bg-muted rounded-lg">
-                <Shield className="h-6 w-6 mx-auto text-primary mb-1" />
-                <p className="text-xs font-medium">Secure Payment</p>
+              <div className="p-2 md:p-3 bg-muted rounded-lg">
+                <Shield className="h-5 w-5 md:h-6 md:w-6 mx-auto text-primary mb-1" />
+                <p className="text-[10px] md:text-xs font-medium">Secure Payment</p>
               </div>
-              <div className="p-3 bg-muted rounded-lg">
-                <RefreshCw className="h-6 w-6 mx-auto text-primary mb-1" />
-                <p className="text-xs font-medium">Easy Returns</p>
+              <div className="p-2 md:p-3 bg-muted rounded-lg">
+                <RefreshCw className="h-5 w-5 md:h-6 md:w-6 mx-auto text-primary mb-1" />
+                <p className="text-[10px] md:text-xs font-medium">Easy Returns</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="description" className="mb-12">
-          <TabsList>
-            <TabsTrigger value="description">Description</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
+        <Tabs defaultValue="description" className="mb-8 md:mb-12">
+          <TabsList className="w-full md:w-auto">
+            <TabsTrigger value="description" className="flex-1 md:flex-none">Description</TabsTrigger>
+            <TabsTrigger value="reviews" className="flex-1 md:flex-none">Reviews ({reviews.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="description" className="mt-4">
             <div className="prose max-w-none">
-              <p className="text-muted-foreground whitespace-pre-wrap">{product.description || 'No description available.'}</p>
+              <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{product.description || 'No description available.'}</p>
             </div>
           </TabsContent>
           <TabsContent value="reviews" className="mt-4">
-            <div className="grid md:grid-cols-3 gap-8">
-              {/* Rating Summary */}
+            <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+              {/* Rating Summary + Write Review */}
               <div className="space-y-4">
                 <div className="text-center">
-                  <p className="text-5xl font-bold">{avgRating.toFixed(1)}</p>
+                  <p className="text-4xl md:text-5xl font-bold">{avgRating.toFixed(1)}</p>
                   <div className="flex justify-center mt-1">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className={`h-5 w-5 ${star <= Math.round(avgRating) ? 'fill-amber-400 text-amber-400' : 'text-muted'}`} />
+                      <Star key={star} className={`h-4 w-4 md:h-5 md:w-5 ${star <= Math.round(avgRating) ? 'fill-amber-400 text-amber-400' : 'text-muted'}`} />
                     ))}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{reviews.length} reviews</p>
@@ -444,6 +447,14 @@ export default function ProductDetailPage() {
                     </Button>
                   </div>
                 )}
+                {!user && (
+                  <div className="border rounded-lg p-4 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">Login to write a review</p>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/auth">Login</Link>
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Reviews List */}
@@ -452,21 +463,21 @@ export default function ProductDetailPage() {
                   <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
                 ) : (
                   reviews.map((review) => (
-                    <div key={review.id} className="p-4 bg-muted rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
+                    <div key={review.id} className="p-3 md:p-4 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <div className="flex">
                           {[1, 2, 3, 4, 5].map((star) => (
-                            <Star key={star} className={`h-4 w-4 ${star <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-muted'}`} />
+                            <Star key={star} className={`h-3 w-3 md:h-4 md:w-4 ${star <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-muted'}`} />
                           ))}
                         </div>
-                        <span className="font-medium">{review.profile?.full_name || 'Anonymous'}</span>
-                        {review.is_verified && <Badge variant="secondary" className="text-xs">Verified</Badge>}
-                        <span className="text-sm text-muted-foreground ml-auto">
+                        <span className="font-medium text-sm">{(review as any).profile?.full_name || 'Anonymous'}</span>
+                        {review.is_verified && <Badge variant="secondary" className="text-[10px]">Verified</Badge>}
+                        <span className="text-xs text-muted-foreground ml-auto">
                           {new Date(review.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      {review.title && <p className="font-medium">{review.title}</p>}
-                      {review.comment && <p className="text-muted-foreground text-sm mt-1">{review.comment}</p>}
+                      {review.title && <p className="font-medium text-sm">{review.title}</p>}
+                      {review.comment && <p className="text-muted-foreground text-xs md:text-sm mt-1">{review.comment}</p>}
                     </div>
                   ))
                 )}
@@ -478,8 +489,8 @@ export default function ProductDetailPage() {
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <section>
-            <h2 className="text-2xl font-bold mb-6">Related Products</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Related Products</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} />
               ))}

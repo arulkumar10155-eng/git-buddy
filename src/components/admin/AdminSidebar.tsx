@@ -6,9 +6,7 @@ import {
   Palette,
   Image,
   Package,
-  FolderTree,
   Percent,
-  Ticket,
   ShoppingCart,
   CreditCard,
   Receipt,
@@ -19,6 +17,7 @@ import {
   Store,
   ChevronLeft,
   ChevronRight,
+  Truck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,10 +28,9 @@ const menuItems = [
   { path: '/admin/storefront', icon: Palette, label: 'Storefront Builder' },
   { path: '/admin/banners', icon: Image, label: 'Banners & Media' },
   { path: '/admin/products', icon: Package, label: 'Products' },
-  { path: '/admin/categories', icon: FolderTree, label: 'Categories' },
-  { path: '/admin/offers', icon: Percent, label: 'Offers' },
-  { path: '/admin/coupons', icon: Ticket, label: 'Coupons' },
+  { path: '/admin/offers', icon: Percent, label: 'Offers & Coupons' },
   { path: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
+  { path: '/admin/deliveries', icon: Truck, label: 'Deliveries' },
   { path: '/admin/payments', icon: CreditCard, label: 'Payments' },
   { path: '/admin/expenses', icon: Receipt, label: 'Expenses' },
   { path: '/admin/customers', icon: Users, label: 'Customers' },
@@ -63,7 +61,6 @@ export function AdminSidebar() {
   useEffect(() => {
     const nav = navRef.current;
     if (nav) {
-      // Restore scroll position after route change
       nav.scrollTop = scrollPosRef.current;
     }
   }, [location.pathname]);

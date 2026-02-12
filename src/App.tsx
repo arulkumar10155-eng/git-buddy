@@ -13,8 +13,7 @@ import AdminProducts from "./pages/admin/Products";
 import AdminCategories from "./pages/admin/Categories";
 import AdminOrders from "./pages/admin/Orders";
 import AdminBanners from "./pages/admin/Banners";
-import AdminOffers from "./pages/admin/Offers";
-import AdminCoupons from "./pages/admin/Coupons";
+import AdminOffersAndCoupons from "./pages/admin/OffersAndCoupons";
 import AdminDeliveries from "./pages/admin/Deliveries";
 import AdminPayments from "./pages/admin/Payments";
 import AdminExpenses from "./pages/admin/Expenses";
@@ -96,8 +95,7 @@ const AppRoutes = () => (
       <Route path="/admin/banners" element={<AdminRoute><AdminBanners /></AdminRoute>} />
       <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
       <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
-      <Route path="/admin/offers" element={<AdminRoute><AdminOffers /></AdminRoute>} />
-      <Route path="/admin/coupons" element={<AdminRoute><AdminCoupons /></AdminRoute>} />
+      <Route path="/admin/offers" element={<AdminRoute><AdminOffersAndCoupons /></AdminRoute>} />
       <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
       <Route path="/admin/deliveries" element={<AdminRoute><AdminDeliveries /></AdminRoute>} />
       <Route path="/admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
